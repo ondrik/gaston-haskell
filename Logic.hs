@@ -24,7 +24,7 @@ showFormula (ForAll var f)      = "∀" ++ [var] ++ ". (" ++ (showFormula f) ++ 
 
 -- instantiance of the data type as class Show
 instance Show Formula where
-	show = showFormula
+  show = showFormula
 
 -- -- an example formula with no meaning
 -- exampleFormula :: Formula
@@ -49,9 +49,9 @@ removeForAll (Exists var f)      = (Exists var (removeForAll f))
 removeForAll (ForAll var f)      = (Neg $ Exists var $ Neg (removeForAll f))
 
 
+-- help
 helpLines :: [String]
 helpLines = [
-  "exampleFormula :: String    -- the formula ∃X ∀Y. (X ⊆ Y) ∧ (¬(X ⊇ Y))) ∧ (∃Z. (Z = σ(Y)))"
+  -- "exampleFormula :: String    -- the formula ∃X ∀Y. (X ⊆ Y) ∧ (¬(X ⊇ Y))) ∧ (∃Z. (Z = σ(Y)))"
+  "exampleFormula :: String    -- the formula " ++ (showFormula exampleFormula)
   ]
-
-

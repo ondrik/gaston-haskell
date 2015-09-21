@@ -16,3 +16,6 @@ Miscellaneous:
 
   ×ₑ ⊕ₑ ×ₐ ⊕ₐ
 
+Superscripts:
+
+   ᵃ ᵇ ᶜ ᵈ ᵉ ᶠ ᵍ ʰ ⁱ ʲ ᵏ ˡ ᵐ ⁿ ᵒ ᵖ ʳ ˢ ᵗ ᵘ ᵛ ʷ ˣ ʸ ᶻ

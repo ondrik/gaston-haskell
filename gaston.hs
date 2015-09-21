@@ -5,38 +5,9 @@
 import qualified Logic
 import Logic (exampleFormula)
 
+import qualified Automaton
+import Automaton (exampleAutomaton)
 
-
--- hierarchical automaton
-data Aut =
-  AutAtomic String
-  | AutUnion Aut Aut
-  | AutIsect Aut Aut
-  | AutCompl Aut
-  | AutProj Logic.Var Aut
-
--- prints the automaton in a human-readable format
-showAut :: Aut -> String
-showAut (AutAtomic phi)      = "aut{" ++ phi ++ "}"
-showAut (AutUnion aut1 aut2) = "(" ++ (showAut aut1) ++ ") union (" ++ (showAut aut2) ++ ")"
-showAut (AutIsect aut1 aut2) = "(" ++ (showAut aut1) ++ ") isect (" ++ (showAut aut2) ++ ")"
-showAut (AutCompl aut)       = "compl(" ++ (showAut aut) ++ ")"
-showAut (AutProj var aut)    = "proj[" ++ [var] ++ "](" ++ (showAut aut) ++ ")"
-
--- instantiance of the data type as class Show
-instance Show Aut where
-  show = showAut
-
-
-
--- translates a formula into an automaton
-toAutomaton :: Logic.Formula -> Aut
-toAutomaton (Logic.FormulaAtomic phi) = AutAtomic phi
-toAutomaton (Logic.Disj f1 f2)        = AutUnion (toAutomaton f1) (toAutomaton f2)
-toAutomaton (Logic.Conj f1 f2)        = AutIsect (toAutomaton f1) (toAutomaton f2)
-toAutomaton (Logic.Neg f)             = AutCompl $ toAutomaton f
-toAutomaton (Logic.Exists var f)      = AutProj var $ toAutomaton f
-toAutomaton f@(Logic.ForAll _ _)      = toAutomaton $ Logic.removeForAll f
 
 
 type State = Char
@@ -75,31 +46,31 @@ instance Show TermFix where
 	show = showTermFix
 
 
--- initial states
-initial :: Aut -> TermFix
-initial (AutAtomic phi)  = TermFixSingleStateSet
-initial (AutUnion a1 a2) = (initial a1) `TermFixCups` (initial a2)
-initial (AutIsect a1 a2) = (initial a1) `TermFixCaps` (initial a2)
-initial (AutCompl a)     = TermFixSingleTermSet $ initial a
-initial (AutProj var a)  = initial a
-
--- final states
-final :: Aut -> TermFix
-final (AutAtomic phi)  = TermFixSingleStateSet
-final (AutUnion a1 a2) = TermFixCupsProd (final a1) (final a2)
-final (AutIsect a1 a2) = TermFixCaps (final a1) (final a2)
-final (AutCompl a)     = TermFixDownCl (nonfinal a)
-final (AutProj var a)  = TermFixLFP ("pre[π(" ++ [var] ++ "), 0]") $ final a
-
-
--- nonfinal states
-nonfinal :: Aut -> TermFix
-nonfinal (AutAtomic phi)  = TermFixSingleStateSet
-nonfinal (AutUnion a1 a2) = TermFixCups (nonfinal a1) (nonfinal a2)
-nonfinal (AutIsect a1 a2) = TermFixCapsProd (nonfinal a1) (nonfinal a2)
-nonfinal (AutCompl a)     = TermFixUpClChoice (final a)
-nonfinal (AutProj var a)  = TermFixGFP ("cpre[π(" ++ [var] ++ "), 0]") $ nonfinal a
-
+-- -- initial states
+-- initial :: Aut -> TermFix
+-- initial (AutAtomic phi)  = TermFixSingleStateSet
+-- initial (AutUnion a1 a2) = (initial a1) `TermFixCups` (initial a2)
+-- initial (AutIsect a1 a2) = (initial a1) `TermFixCaps` (initial a2)
+-- initial (AutCompl a)     = TermFixSingleTermSet $ initial a
+-- initial (AutProj var a)  = initial a
+--
+-- -- final states
+-- final :: Aut -> TermFix
+-- final (AutAtomic phi)  = TermFixSingleStateSet
+-- final (AutUnion a1 a2) = TermFixCupsProd (final a1) (final a2)
+-- final (AutIsect a1 a2) = TermFixCaps (final a1) (final a2)
+-- final (AutCompl a)     = TermFixDownCl (nonfinal a)
+-- final (AutProj var a)  = TermFixLFP ("pre[π(" ++ [var] ++ "), 0]") $ final a
+--
+--
+-- -- nonfinal states
+-- nonfinal :: Aut -> TermFix
+-- nonfinal (AutAtomic phi)  = TermFixSingleStateSet
+-- nonfinal (AutUnion a1 a2) = TermFixCups (nonfinal a1) (nonfinal a2)
+-- nonfinal (AutIsect a1 a2) = TermFixCapsProd (nonfinal a1) (nonfinal a2)
+-- nonfinal (AutCompl a)     = TermFixUpClChoice (final a)
+-- nonfinal (AutProj var a)  = TermFixGFP ("cpre[π(" ++ [var] ++ "), 0]") $ nonfinal a
+--
 
 
 
