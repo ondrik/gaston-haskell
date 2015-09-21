@@ -2,73 +2,9 @@
 -- Gaston: A prototype implementation of a new decision procedure for WS1S
 --
 
+import qualified Logic
+import Logic (exampleFormula)
 
-
-
-
---
---                         Useful UTF-8 Characters
---                         =======================
--- Logical symbols:
--- ¬ ∃ ∀ ⋁ ⋀ ∧ ∨
---
--- Set symbols:
--- ⋂ ⋃ ↑ ↓ ⫫ ∪ ∩ ⊆ ⊇
---
--- Greek alphabet (small):
--- α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ ς σ τ υ φ χ ψ ω
---
--- Miscellaneous:
--- ×ₑ ⊕ₑ ×ₐ ⊕ₐ
---
-
--- second-order variable type
-type Var = Char
-
-
--- formula type
-data Formula =
-  FormulaAtomic String
-  | Disj Formula Formula
-  | Conj Formula Formula
-  | Neg Formula
-  | Exists Var Formula
-  | ForAll Var Formula
-
--- prints the formula in human-readable format
-showFormula :: Formula -> String
-showFormula (FormulaAtomic phi) = phi
-showFormula (Disj f1 f2)        = "(" ++ (showFormula f1) ++ ") ∨ (" ++ (showFormula f2) ++ ")"
-showFormula (Conj f1 f2)        = "(" ++ (showFormula f1) ++ ") ∧ (" ++ (showFormula f2) ++ ")"
-showFormula (Neg f)             = "¬(" ++ (showFormula f) ++ ")"
-showFormula (Exists var f)      = "∃" ++ [var] ++ ". (" ++ (showFormula f) ++ ")"
-showFormula (ForAll var f)      = "∀" ++ [var] ++ ". (" ++ (showFormula f) ++ ")"
-
--- instantiance of the data type as class Show
-instance Show Formula where
-	show = showFormula
-
--- -- an example formula with no meaning
--- exampleFormula :: Formula
--- exampleFormula = ForAll 'X' $ FormulaAtomic `Disj` (Exists 'Y' $ Neg (FormulaAtomic `Conj` (FormulaAtomic `Disj` FormulaAtomic)))
-
--- our example formula
-exampleFormula :: Formula
-exampleFormula =
-  Exists 'X' $
-  ForAll 'Y' $
-  (FormulaAtomic "X ⊆ Y") `Conj`
-    (Neg $ FormulaAtomic "X ⊇ Y") `Conj`
-    (Exists 'Z' $ FormulaAtomic "Z = σ(Y)")
-
--- removes the universal quantifier
-removeForAll :: Formula -> Formula
-removeForAll (FormulaAtomic phi) = (FormulaAtomic phi)
-removeForAll (Disj f1 f2)        = (Disj (removeForAll f1) (removeForAll f2))
-removeForAll (Conj f1 f2)        = (Conj (removeForAll f1) (removeForAll f2))
-removeForAll (Neg f)             = (Neg (removeForAll f))
-removeForAll (Exists var f)      = (Exists var (removeForAll f))
-removeForAll (ForAll var f)      = (Neg $ Exists var $ Neg (removeForAll f))
 
 
 -- hierarchical automaton
@@ -77,7 +13,7 @@ data Aut =
   | AutUnion Aut Aut
   | AutIsect Aut Aut
   | AutCompl Aut
-  | AutProj Var Aut
+  | AutProj Logic.Var Aut
 
 -- prints the automaton in a human-readable format
 showAut :: Aut -> String
@@ -89,18 +25,18 @@ showAut (AutProj var aut)    = "proj[" ++ [var] ++ "](" ++ (showAut aut) ++ ")"
 
 -- instantiance of the data type as class Show
 instance Show Aut where
-	show = showAut
+  show = showAut
 
 
 
 -- translates a formula into an automaton
-toAutomaton :: Formula -> Aut
-toAutomaton (FormulaAtomic phi) = AutAtomic phi
-toAutomaton (Disj f1 f2)        = AutUnion (toAutomaton f1) (toAutomaton f2)
-toAutomaton (Conj f1 f2)        = AutIsect (toAutomaton f1) (toAutomaton f2)
-toAutomaton (Neg f)             = AutCompl $ toAutomaton f
-toAutomaton (Exists var f)      = AutProj var $ toAutomaton f
-toAutomaton f@(ForAll _ _)      = toAutomaton $ removeForAll f
+toAutomaton :: Logic.Formula -> Aut
+toAutomaton (Logic.FormulaAtomic phi) = AutAtomic phi
+toAutomaton (Logic.Disj f1 f2)        = AutUnion (toAutomaton f1) (toAutomaton f2)
+toAutomaton (Logic.Conj f1 f2)        = AutIsect (toAutomaton f1) (toAutomaton f2)
+toAutomaton (Logic.Neg f)             = AutCompl $ toAutomaton f
+toAutomaton (Logic.Exists var f)      = AutProj var $ toAutomaton f
+toAutomaton f@(Logic.ForAll _ _)      = toAutomaton $ Logic.removeForAll f
 
 
 type State = Char
@@ -209,4 +145,17 @@ nonfinal (AutProj var a)  = TermFixGFP ("cpre[π(" ++ [var] ++ "), 0]") $ nonfin
 -- allstates :: Aut -> SymbStateSet
 -- allstates AutAtomic    = SymbStateSetAtomic
 --
---
+
+helpLines :: [String]
+helpLines = [
+  "Logic:",
+  ""
+  ]
+  ++ (offsetBy 2 Logic.helpLines)
+  ++ []
+  where
+    offsetBy n [] = []
+    offsetBy n (x:xs) = ((replicate n ' ') ++ x):(offsetBy n xs)
+
+help :: IO ()
+help = putStrLn $ unlines helpLines
