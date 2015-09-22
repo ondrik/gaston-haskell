@@ -106,6 +106,8 @@ equalST (STUpClosedChoice lhs) (STUpClosedChoice rhs)  = lhs `equalST` rhs
 equalST (STDownClosed lhs) (STDownClosed rhs)          = lhs `equalST` rhs
 equalST (STListFin lhs) (STListFin rhs)                = (lhs `listIsSubset` rhs) && (rhs `listIsSubset` lhs)
 equalST (STListNonfin lhs) (STListNonfin rhs)          = (lhs `listIsSubset` rhs) && (rhs `listIsSubset` lhs)
+equalST STUnknown _                                    = True     -- FIXME: I don't know
+equalST _ STUnknown                                    = True     -- FIXME: I don't know
 equalST lhs rhs =
   error $ "equalST: incompatible terms: lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
 
@@ -149,7 +151,8 @@ final (AutComplFin a)        = STDownClosed $ nonfinal a
 -- final (AutProjFin var a)     = STListFin [final a]  -- FIXME: this is clearly wrong
 final (AutProjFin var a)     = STListFin fxList
   where
-    fxList = computeFixpoint (\xs -> nub $ xs ++ (map (pre a [var])) xs) [final a]    -- FIXME: the symbol is wrong
+    fxList = computeFixpoint (\xs -> xs `union` (map (pre a [var])) xs) [final a]
+
 
 -- computes a fixpoint of a function
 computeFixpoint :: Eq a => (a -> a) -> a -> a
@@ -166,7 +169,9 @@ nonfinal (AutAtomicNonfin phi)
 nonfinal (AutUnionNonfin a1 a2) = (nonfinal a1) `STUnionNonfin` (nonfinal a2)
 nonfinal (AutIsectNonfin a1 a2) = (nonfinal a1) `STIsectNonfin` (nonfinal a2)
 nonfinal (AutComplNonfin a)     = STUpClosedChoice $ final a
-nonfinal (AutProjNonfin var a)  = STListNonfin [nonfinal a]  -- FIXME: this is clearly wrong
+nonfinal (AutProjNonfin var a)  = STListNonfin fxList
+  where
+    fxList = computeFixpoint (\xs -> xs `union` (map (cpre a [var])) xs) [nonfinal a]
 
 
 -- zero-predecessors of a state term with a transition function with given variables projected out
@@ -174,18 +179,30 @@ pre :: Aut -> [Var] -> StateTerm -> StateTerm
 pre (AutUnionFin a1 a2) vars (STUnionFin t1 t2) = (pre a1 vars t1) `STUnionFin` (pre a2 vars t2)
 pre (AutIsectFin a1 a2) vars (STIsectFin t1 t2) = (pre a1 vars t1) `STIsectFin` (pre a2 vars t2)
 pre (AutComplFin a) vars (STDownClosed t)       = STDownClosed (cpre a vars t)
-pre (AutProjFin var a) vars (STListFin [t])     = STListFin [pre a vars t]        -- FIXME: this is clearly wrong
+pre (AutProjFin var a) vars (STListFin xs)      = STListFin $ nub $ map (pre a (sort $ var:vars)) xs        -- FIXME: this is clearly wrong
 pre (AutAtomicFin phi) vars (STSet states)
   | phi == "X ⊆ Y"    = case (vars, states) of
-                          (['X'], ["q1"])   -> STSet ["q1"]
-                          otherwise         -> error $ "pre(X ⊆ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+                          ("X", ["q1"])   -> STSet ["q1"]
+                          ("Y", ["q1"])   -> STSet ["q1"]
+                          ("XY", ["q1"])  -> STSet ["q1"]
+                          otherwise       -> error $ "pre(X ⊆ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | phi == "X ⊇ Y"    = error $ "pre(X ⊇ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | phi == "Z = σ(Y)" = case (vars, states) of
-                          (['Z'], ["q3"])   -> STSet ["q4"]
-                          (['Z'], ["q4"])   -> STSet []
-                          (['Z'], [])       -> STSet []
-                          (['X'], [])       -> STSet []
-                          otherwise         -> error $ "pre(Z = σ(Y)); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+                          ("X", [])            -> STSet []
+                          ("X", ["q3"])        -> STSet ["q3"]
+                          ("X", ["q4"])        -> STSet []
+                          ("X", ["q3", "q4"])  -> STSet ["q3"]
+                          ("Y", ["q3", "q4"])  -> STSet ["q3"]
+                          ("Y", ["q3"])        -> STSet ["q3"]
+                          ("Z", ["q3"])        -> STSet ["q3", "q4"]
+                          ("Z", ["q4"])        -> STSet []
+                          ("Z", ["q3", "q4"])  -> STSet ["q3", "q4"]
+                          ("Z", [])            -> STSet []
+                          ("YZ", ["q3"])       -> STSet ["q3", "q4"]
+                          ("YZ", ["q3", "q4"]) -> STSet ["q3", "q4"]
+                          ("XYZ", ["q3"])      -> STSet ["q3", "q4"]
+                          ("XYZ", ["q3", "q4"])-> STSet ["q3", "q4"]
+                          otherwise            -> error $ "pre(Z = σ(Y)); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | otherwise         = error "pre: Unknown atomic predicate"
 pre aut vars t =
   error $ "Invalid input of pre: aut = " ++ (show aut) ++ "; vars = " ++ (show vars) ++ "; t = " ++ (show t)
@@ -196,12 +213,14 @@ cpre :: Aut -> [Var] -> StateTerm -> StateTerm
 cpre (AutUnionNonfin a1 a2) vars (STUnionNonfin t1 t2) = (cpre a1 vars t1) `STUnionNonfin` (cpre a2 vars t2)
 cpre (AutIsectNonfin a1 a2) vars (STIsectNonfin t1 t2) = (cpre a1 vars t1) `STIsectNonfin` (cpre a2 vars t2)
 cpre (AutComplNonfin a) vars (STUpClosedChoice t)      = STUpClosedChoice (pre a vars t)
-cpre (AutProjNonfin var a) vars (STListNonfin [t])     = STListNonfin [cpre a vars t]        -- FIXME: this is clearly wrong
+cpre (AutProjNonfin var a) vars (STListNonfin xs)      = STListNonfin $ nub $ map (cpre a (sort $ var:vars)) xs        -- FIXME: this is clearly wrong
 cpre (AutAtomicNonfin phi) vars (STSet states)
   | phi == "X ⊆ Y"    = error $ "cpre(X ⊆ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | phi == "X ⊇ Y"    = case (vars, states) of
-                          (['X'], [])      -> STSet []
-                          otherwise        -> error $ "cpre(X ⊇ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+                          ("X", [])      -> STSet []
+                          ("Y", [])      -> STSet []
+                          ("XY", [])     -> STSet []
+                          otherwise      -> error $ "cpre(X ⊇ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | phi == "Z = σ(Y)" = error $ "cpre(Z = σ(Y)); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | otherwise         = error "cpre: Unknown atomic predicate"
 cpre aut vars t =
@@ -238,9 +257,15 @@ isectNonempty (AutIsectFin a1 a2) (STIsectFin l1 l2) (STIsectFin r1 r2) = res
 isectNonempty (AutComplFin a) (STUpClosed lhs) (STDownClosed rhs)       = (fst res, STDownClosed (snd res))
   where
     res = isSubset a lhs rhs
-isectNonempty (AutProjFin var a) lhs (STListFin [rhs])                  = (fst res, STListFin [(snd res)])     -- FIXME: this is wrong
+isectNonempty (AutProjFin var a) lhs (STListFin xs)                     = res     -- FIXME: this is wrong
   where
-    res = isectNonempty a lhs rhs
+    boolFxpList = nub $ map (isectNonempty a lhs) xs
+    res = case (or (map fst boolFxpList)) of
+      True   -> (True, STListFin $ (map snd $ falsePrefixPlusOne boolFxpList) ++ [STUnknown])
+      False  -> (False, STListFin (map snd boolFxpList))
+    falsePrefixPlusOne list = beg ++ ([head end])
+      where
+        (beg, end) = span (\x -> (fst x) == False) list
 isectNonempty (AutAtomicFin _) (STSet lhs) (STSet rhs)                  = (listIsectNonempty lhs rhs, STSet rhs)
 isectNonempty aut lhs rhs =
   error $ "isectNonempty: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
@@ -253,20 +278,34 @@ listIsSubset lhs rhs = and $ map (\x -> x `elem` rhs) lhs
 
 -- tests whether one state term is (semantically) a subset of another one
 isSubset :: Aut -> StateTerm -> StateTerm -> ReturnVal
-isSubset (AutUnionNonfin a1 a2) (STUnionNonfin l1 l2) (STUnionNonfin r1 r2) = ((fst res1) || (fst res2), (snd res1) `STUnionNonfin` (snd res2))
+isSubset (AutUnionNonfin a1 a2) (STUnionNonfin l1 l2) (STUnionNonfin r1 r2) = res
   where
-    res1 = isSubset a1 l1 r1
-    res2 = isSubset a2 l2 r2
-isSubset (AutIsectNonfin a1 a2) (STIsectNonfin l1 l2) (STIsectNonfin r1 r2) = ((fst res1) && (fst res2), (snd res1) `STIsectNonfin` (snd res2))
+    (bool1, fxp1) = isSubset a1 l1 r1
+    (bool2, fxp2) = isSubset a2 l2 r2
+    res = case (bool1, bool2) of
+      (True, True) -> (True, fxp1 `STUnionNonfin` fxp2)
+      (False, _)   -> (False, fxp1 `STUnionNonfin` STUnknown)
+      (_, False)   -> (False, STUnknown `STUnionNonfin` fxp2)
+isSubset (AutIsectNonfin a1 a2) (STIsectNonfin l1 l2) (STIsectNonfin r1 r2) = res
   where
-    res1 = isSubset a1 l1 r1
-    res2 = isSubset a2 l2 r2
+    (bool1, fxp1) = isSubset a1 l1 r1
+    (bool2, fxp2) = isSubset a2 l2 r2
+    res = case (bool1, bool2) of    -- FIXME: this is very fishy, cf. the note on the whiteboard
+      (True, True) -> (True, fxp1 `STIsectNonfin` fxp2)
+      (False, _)   -> (False, fxp1 `STIsectNonfin` STUnknown)
+      (_, False)   -> (False, STUnknown `STIsectNonfin` fxp2)
 isSubset (AutComplNonfin a) (STUpClosed lhs) (STUpClosedChoice rhs)         = (fst res, STUpClosedChoice (snd res))
   where
     res = isectNonempty a lhs rhs
-isSubset (AutProjNonfin var a) lhs (STListNonfin [rhs])                     = (fst res, STListNonfin [(snd res)])        -- FIXME: this is wrong
+isSubset (AutProjNonfin var a) lhs (STListNonfin xs)                        = res        -- FIXME: this is wrong
   where
-    res = isSubset a lhs rhs
+    boolFxpList = nub $ map (isSubset a lhs) xs
+    res = case (and (map fst boolFxpList)) of
+      True   -> (True, STListFin (map snd boolFxpList))
+      False  -> (False, STListFin $ (map snd $ truePrefixPlusOne boolFxpList) ++ [STUnknown])
+    truePrefixPlusOne list = beg ++ ([head end])
+      where
+        (beg, end) = span (\x -> (fst x) == True) list
 isSubset (AutAtomicNonfin _) (STSet lhs) (STSet rhs)                        = (listIsSubset lhs rhs, STSet rhs)
 isSubset aut lhs rhs =
   error $ "isSubset: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
