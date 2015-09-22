@@ -3,7 +3,7 @@ module Automaton where
 import qualified Logic
 import Logic (Var)
 
-import Data.List (intercalate)
+import Data.List
 
 -- hierarchical automaton
 data Aut =
@@ -85,13 +85,33 @@ showST (STIsectNonfin t1 t2) = "(" ++ (showST t1) ++ " ᵢ×ⁿ " ++ (showST t2)
 showST (STUpClosed t)        = "↑{" ++ showST t ++ "}"
 showST (STUpClosedChoice t)  = "\ESC[33m↑⫫{\ESC[m" ++ showST t ++ "\ESC[33m}\ESC[m"
 showST (STDownClosed t)      = "\ESC[35m↓{\ESC[m" ++ showST t ++ "\ESC[35m}\ESC[m"
-showST (STListFin xs)        = "<" ++ (intercalate "," $ map show xs) ++ ">ᶠ"
-showST (STListNonfin xs)     = "<" ++ (intercalate "," $ map show xs) ++ ">ⁿ"
+showST (STListFin xs)        = "<|" ++ (show $ length xs) ++ "| " ++ (intercalate "," $ map show xs) ++ ">ᶠ"
+showST (STListNonfin xs)     = "<|" ++ (show $ length xs) ++ "| " ++ (intercalate "," $ map show xs) ++ ">ⁿ"
 showST STUnknown             = "\ESC[31m??\ESC[m"
 
 -- instantiance of the data type as class Show
 instance Show StateTerm where
   show = showST
+
+
+-- equality for state terms
+equalST :: StateTerm -> StateTerm -> Bool
+equalST (STSet lhs) (STSet rhs)                        = (lhs `listIsSubset` rhs) && (rhs `listIsSubset` lhs)
+equalST (STUnionFin l1 l2) (STUnionFin r1 r2)          = (l1 `equalST` r1) && (l2 `equalST` r2)
+equalST (STUnionNonfin l1 l2) (STUnionNonfin r1 r2)    = (l1 `equalST` r1) && (l2 `equalST` r2)
+equalST (STIsectFin l1 l2) (STIsectFin r1 r2)          = (l1 `equalST` r1) && (l2 `equalST` r2)
+equalST (STIsectNonfin l1 l2) (STIsectNonfin r1 r2)    = (l1 `equalST` r1) && (l2 `equalST` r2)
+equalST (STUpClosed lhs) (STUpClosed rhs)              = lhs `equalST` rhs
+equalST (STUpClosedChoice lhs) (STUpClosedChoice rhs)  = lhs `equalST` rhs
+equalST (STDownClosed lhs) (STDownClosed rhs)          = lhs `equalST` rhs
+equalST (STListFin lhs) (STListFin rhs)                = (lhs `listIsSubset` rhs) && (rhs `listIsSubset` lhs)
+equalST (STListNonfin lhs) (STListNonfin rhs)          = (lhs `listIsSubset` rhs) && (rhs `listIsSubset` lhs)
+equalST lhs rhs =
+  error $ "equalST: incompatible terms: lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
+
+-- instantiance of the data type as class Eq
+instance Eq StateTerm where
+  (==) = equalST
 
 
 -- initial states
@@ -126,8 +146,14 @@ final (AutAtomicFin phi)
 final (AutUnionFin a1 a2)    = (final a1) `STUnionFin` (final a2)
 final (AutIsectFin a1 a2)    = (final a1) `STIsectFin` (final a2)
 final (AutComplFin a)        = STDownClosed $ nonfinal a
--- final (AutProjFin var a)     = final a           -- FIXME: this is clearly wrong
-final (AutProjFin var a)     = STListFin [final a]  -- FIXME: this is clearly wrong
+-- final (AutProjFin var a)     = STListFin [final a]  -- FIXME: this is clearly wrong
+final (AutProjFin var a)     = STListFin fxList
+  where
+    fxList = computeFixpoint (\xs -> nub $ xs ++ (map (pre a [var])) xs) [final a]    -- FIXME: the symbol is wrong
+
+-- computes a fixpoint of a function
+computeFixpoint :: Eq a => (a -> a) -> a -> a
+computeFixpoint f start = if (f start) == start then start else computeFixpoint f (f start)
 
 
 -- nonfinal states
@@ -140,7 +166,6 @@ nonfinal (AutAtomicNonfin phi)
 nonfinal (AutUnionNonfin a1 a2) = (nonfinal a1) `STUnionNonfin` (nonfinal a2)
 nonfinal (AutIsectNonfin a1 a2) = (nonfinal a1) `STIsectNonfin` (nonfinal a2)
 nonfinal (AutComplNonfin a)     = STUpClosedChoice $ final a
--- nonfinal (AutProjNonfin var a)  = nonfinal a              -- FIXME: this is clearly wrong
 nonfinal (AutProjNonfin var a)  = STListNonfin [nonfinal a]  -- FIXME: this is clearly wrong
 
 
@@ -149,11 +174,18 @@ pre :: Aut -> [Var] -> StateTerm -> StateTerm
 pre (AutUnionFin a1 a2) vars (STUnionFin t1 t2) = (pre a1 vars t1) `STUnionFin` (pre a2 vars t2)
 pre (AutIsectFin a1 a2) vars (STIsectFin t1 t2) = (pre a1 vars t1) `STIsectFin` (pre a2 vars t2)
 pre (AutComplFin a) vars (STDownClosed t)       = STDownClosed (cpre a vars t)
-pre (AutProjFin var a) vars t                   = pre a vars t        -- FIXME: this is clearly wrong
-pre (AutAtomicFin phi) vars t
-  | phi == "X ⊆ Y"    = error $ "pre(X ⊆ Y); vars = " ++ (show vars) ++ "; t = " ++ (show t)
-  | phi == "X ⊇ Y"    = error $ "pre(X ⊇ Y)" ++ (show vars) ++ "; t = " ++ (show t)
-  | phi == "Z = σ(Y)" = error $ "pre(Z = σ(Y))" ++ (show vars) ++ "; t = " ++ (show t)
+pre (AutProjFin var a) vars (STListFin [t])     = STListFin [pre a vars t]        -- FIXME: this is clearly wrong
+pre (AutAtomicFin phi) vars (STSet states)
+  | phi == "X ⊆ Y"    = case (vars, states) of
+                          (['X'], ["q1"])   -> STSet ["q1"]
+                          otherwise         -> error $ "pre(X ⊆ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+  | phi == "X ⊇ Y"    = error $ "pre(X ⊇ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+  | phi == "Z = σ(Y)" = case (vars, states) of
+                          (['Z'], ["q3"])   -> STSet ["q4"]
+                          (['Z'], ["q4"])   -> STSet []
+                          (['Z'], [])       -> STSet []
+                          (['X'], [])       -> STSet []
+                          otherwise         -> error $ "pre(Z = σ(Y)); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | otherwise         = error "pre: Unknown atomic predicate"
 pre aut vars t =
   error $ "Invalid input of pre: aut = " ++ (show aut) ++ "; vars = " ++ (show vars) ++ "; t = " ++ (show t)
@@ -164,11 +196,13 @@ cpre :: Aut -> [Var] -> StateTerm -> StateTerm
 cpre (AutUnionNonfin a1 a2) vars (STUnionNonfin t1 t2) = (cpre a1 vars t1) `STUnionNonfin` (cpre a2 vars t2)
 cpre (AutIsectNonfin a1 a2) vars (STIsectNonfin t1 t2) = (cpre a1 vars t1) `STIsectNonfin` (cpre a2 vars t2)
 cpre (AutComplNonfin a) vars (STUpClosedChoice t)      = STUpClosedChoice (pre a vars t)
-cpre (AutProjNonfin var a) vars t                      = cpre a vars t        -- FIXME: this is clearly wrong
-cpre (AutAtomicNonfin phi) vars t
-  | phi == "X ⊆ Y"    = error $ "cpre(X ⊆ Y)" ++ (show vars) ++ "; t = " ++ (show t)
-  | phi == "X ⊇ Y"    = error $ "cpre(X ⊇ Y)" ++ (show vars) ++ "; t = " ++ (show t)
-  | phi == "Z = σ(Y)" = error $ "cpre(Z = σ(Y))" ++ (show vars) ++ "; t = " ++ (show t)
+cpre (AutProjNonfin var a) vars (STListNonfin [t])     = STListNonfin [cpre a vars t]        -- FIXME: this is clearly wrong
+cpre (AutAtomicNonfin phi) vars (STSet states)
+  | phi == "X ⊆ Y"    = error $ "cpre(X ⊆ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+  | phi == "X ⊇ Y"    = case (vars, states) of
+                          (['X'], [])      -> STSet []
+                          otherwise        -> error $ "cpre(X ⊇ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+  | phi == "Z = σ(Y)" = error $ "cpre(Z = σ(Y)); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | otherwise         = error "cpre: Unknown atomic predicate"
 cpre aut vars t =
   error $ "Invalid input of cpre: aut = " ++ (show aut) ++ "; vars = " ++ (show vars) ++ "; t = " ++ (show t)
@@ -204,7 +238,9 @@ isectNonempty (AutIsectFin a1 a2) (STIsectFin l1 l2) (STIsectFin r1 r2) = res
 isectNonempty (AutComplFin a) (STUpClosed lhs) (STDownClosed rhs)       = (fst res, STDownClosed (snd res))
   where
     res = isSubset a lhs rhs
-isectNonempty (AutProjFin var a) lhs (STListFin [rhs])                  = isectNonempty a lhs rhs        -- FIXME: this is wrong
+isectNonempty (AutProjFin var a) lhs (STListFin [rhs])                  = (fst res, STListFin [(snd res)])     -- FIXME: this is wrong
+  where
+    res = isectNonempty a lhs rhs
 isectNonempty (AutAtomicFin _) (STSet lhs) (STSet rhs)                  = (listIsectNonempty lhs rhs, STSet rhs)
 isectNonempty aut lhs rhs =
   error $ "isectNonempty: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
@@ -228,7 +264,9 @@ isSubset (AutIsectNonfin a1 a2) (STIsectNonfin l1 l2) (STIsectNonfin r1 r2) = ((
 isSubset (AutComplNonfin a) (STUpClosed lhs) (STUpClosedChoice rhs)         = (fst res, STUpClosedChoice (snd res))
   where
     res = isectNonempty a lhs rhs
-isSubset (AutProjNonfin var a) lhs (STListNonfin [rhs])                     = isSubset a lhs rhs        -- FIXME: this is wrong
+isSubset (AutProjNonfin var a) lhs (STListNonfin [rhs])                     = (fst res, STListNonfin [(snd res)])        -- FIXME: this is wrong
+  where
+    res = isSubset a lhs rhs
 isSubset (AutAtomicNonfin _) (STSet lhs) (STSet rhs)                        = (listIsSubset lhs rhs, STSet rhs)
 isSubset aut lhs rhs =
   error $ "isSubset: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
