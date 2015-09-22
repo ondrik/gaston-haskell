@@ -3,6 +3,8 @@ module Automaton where
 import qualified Logic
 import Logic (Var)
 
+import Data.List (intercalate)
+
 -- hierarchical automaton
 data Aut =
     AutAtomicFin String
@@ -68,6 +70,8 @@ data StateTerm =
   | STUpClosed StateTerm
   | STUpClosedChoice StateTerm
   | STDownClosed StateTerm
+  | STListFin [StateTerm]
+  | STListNonfin [StateTerm]
   | STUnknown
 
 
@@ -81,6 +85,8 @@ showST (STIsectNonfin t1 t2) = "(" ++ (showST t1) ++ " ᵢ×ⁿ " ++ (showST t2)
 showST (STUpClosed t)        = "↑{" ++ showST t ++ "}"
 showST (STUpClosedChoice t)  = "\ESC[33m↑⫫{\ESC[m" ++ showST t ++ "\ESC[33m}\ESC[m"
 showST (STDownClosed t)      = "\ESC[35m↓{\ESC[m" ++ showST t ++ "\ESC[35m}\ESC[m"
+showST (STListFin xs)        = "<" ++ (intercalate "," $ map show xs) ++ ">ᶠ"
+showST (STListNonfin xs)     = "<" ++ (intercalate "," $ map show xs) ++ ">ⁿ"
 showST STUnknown             = "\ESC[31m??\ESC[m"
 
 -- instantiance of the data type as class Show
@@ -120,7 +126,8 @@ final (AutAtomicFin phi)
 final (AutUnionFin a1 a2)    = (final a1) `STUnionFin` (final a2)
 final (AutIsectFin a1 a2)    = (final a1) `STIsectFin` (final a2)
 final (AutComplFin a)        = STDownClosed $ nonfinal a
-final (AutProjFin var a)     = final a           -- FIXME: this is clearly wrong
+-- final (AutProjFin var a)     = final a           -- FIXME: this is clearly wrong
+final (AutProjFin var a)     = STListFin [final a]  -- FIXME: this is clearly wrong
 
 
 -- nonfinal states
@@ -133,7 +140,8 @@ nonfinal (AutAtomicNonfin phi)
 nonfinal (AutUnionNonfin a1 a2) = (nonfinal a1) `STUnionNonfin` (nonfinal a2)
 nonfinal (AutIsectNonfin a1 a2) = (nonfinal a1) `STIsectNonfin` (nonfinal a2)
 nonfinal (AutComplNonfin a)     = STUpClosedChoice $ final a
-nonfinal (AutProjNonfin var a)  = nonfinal a     -- FIXME: this is clearly wrong
+-- nonfinal (AutProjNonfin var a)  = nonfinal a              -- FIXME: this is clearly wrong
+nonfinal (AutProjNonfin var a)  = STListNonfin [nonfinal a]  -- FIXME: this is clearly wrong
 
 
 -- zero-predecessors of a state term with a transition function with given variables projected out
@@ -196,10 +204,11 @@ isectNonempty (AutIsectFin a1 a2) (STIsectFin l1 l2) (STIsectFin r1 r2) = res
 isectNonempty (AutComplFin a) (STUpClosed lhs) (STDownClosed rhs)       = (fst res, STDownClosed (snd res))
   where
     res = isSubset a lhs rhs
-isectNonempty (AutProjFin var a) lhs rhs                                = isectNonempty a lhs rhs        -- FIXME: this is wrong
+isectNonempty (AutProjFin var a) lhs (STListFin [rhs])                  = isectNonempty a lhs rhs        -- FIXME: this is wrong
 isectNonempty (AutAtomicFin _) (STSet lhs) (STSet rhs)                  = (listIsectNonempty lhs rhs, STSet rhs)
 isectNonempty aut lhs rhs =
   error $ "isectNonempty: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
+
 
 -- checks whether one list is a subset of another list
 listIsSubset :: Eq a => [a] -> [a] -> Bool
@@ -219,7 +228,7 @@ isSubset (AutIsectNonfin a1 a2) (STIsectNonfin l1 l2) (STIsectNonfin r1 r2) = ((
 isSubset (AutComplNonfin a) (STUpClosed lhs) (STUpClosedChoice rhs)         = (fst res, STUpClosedChoice (snd res))
   where
     res = isectNonempty a lhs rhs
-isSubset (AutProjNonfin var a) lhs rhs                                      = isSubset a lhs rhs        -- FIXME: this is wrong
+isSubset (AutProjNonfin var a) lhs (STListNonfin [rhs])                     = isSubset a lhs rhs        -- FIXME: this is wrong
 isSubset (AutAtomicNonfin _) (STSet lhs) (STSet rhs)                        = (listIsSubset lhs rhs, STSet rhs)
 isSubset aut lhs rhs =
   error $ "isSubset: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
