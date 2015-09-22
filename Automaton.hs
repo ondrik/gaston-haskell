@@ -68,18 +68,20 @@ data StateTerm =
   | STUpClosed StateTerm
   | STUpClosedChoice StateTerm
   | STDownClosed StateTerm
+  | STUnknown
 
 
 -- print out a state term in a human-readable format
 showST :: StateTerm -> String
-showST (STSet xs)            = show xs
+showST (STSet xs)            = "\ESC[34m" ++ (show xs) ++ "\ESC[m"
 showST (STUnionFin t1 t2)    = "(" ++ (showST t1) ++ " ᵤ×ᶠ " ++ (showST t2) ++ ")"
 showST (STUnionNonfin t1 t2) = "(" ++ (showST t1) ++ " ᵤ×ⁿ " ++ (showST t2) ++ ")"
 showST (STIsectFin t1 t2)    = "(" ++ (showST t1) ++ " ᵢ×ᶠ " ++ (showST t2) ++ ")"
 showST (STIsectNonfin t1 t2) = "(" ++ (showST t1) ++ " ᵢ×ⁿ " ++ (showST t2) ++ ")"
 showST (STUpClosed t)        = "↑{" ++ showST t ++ "}"
-showST (STUpClosedChoice t)  = "↑⫫{" ++ showST t ++ "}"
-showST (STDownClosed t)      = "↓{" ++ showST t ++ "}"
+showST (STUpClosedChoice t)  = "\ESC[33m↑⫫{\ESC[m" ++ showST t ++ "\ESC[33m}\ESC[m"
+showST (STDownClosed t)      = "\ESC[35m↓{\ESC[m" ++ showST t ++ "\ESC[35m}\ESC[m"
+showST STUnknown             = "\ESC[31m??\ESC[m"
 
 -- instantiance of the data type as class Show
 instance Show StateTerm where
@@ -175,14 +177,22 @@ listIsectNonempty lhs rhs = or $ map (\x -> x `elem` rhs) lhs
 
 -- tests whether an intersection of state terms is nonempty
 isectNonempty :: Aut -> StateTerm -> StateTerm -> ReturnVal
-isectNonempty (AutUnionFin a1 a2) (STUnionFin l1 l2) (STUnionFin r1 r2) = ((fst res1) || (fst res2), (snd res1) `STUnionFin` (snd res2))
+isectNonempty (AutUnionFin a1 a2) (STUnionFin l1 l2) (STUnionFin r1 r2) = res
   where
-    res1 = isectNonempty a1 l1 r1
-    res2 = isectNonempty a2 l2 r2
-isectNonempty (AutIsectFin a1 a2) (STIsectFin l1 l2) (STIsectFin r1 r2) = ((fst res1) && (fst res2), (snd res1) `STIsectFin` (snd res2))
+    (bool1, fxp1) = isectNonempty a1 l1 r1
+    (bool2, fxp2) = isectNonempty a2 l2 r2
+    res = case (bool1, bool2) of
+      (False, False) -> (False, fxp1 `STUnionFin` fxp2)
+      (True, _)      -> (True, fxp1 `STUnionFin` STUnknown)
+      (_, True)      -> (True, STUnknown `STUnionFin` fxp2)
+isectNonempty (AutIsectFin a1 a2) (STIsectFin l1 l2) (STIsectFin r1 r2) = res
   where
-    res1 = isectNonempty a1 l1 r1
-    res2 = isectNonempty a2 l2 r2
+    (bool1, fxp1) = isectNonempty a1 l1 r1
+    (bool2, fxp2) = isectNonempty a2 l2 r2
+    res = case (bool1, bool2) of
+      (True, True) -> (True, fxp1 `STIsectFin` fxp2)
+      (False, _)   -> (False, fxp1 `STIsectFin` STUnknown)
+      (_, False)   -> (False, STUnknown `STIsectFin` fxp2)
 isectNonempty (AutComplFin a) (STUpClosed lhs) (STDownClosed rhs)       = (fst res, STDownClosed (snd res))
   where
     res = isSubset a lhs rhs
