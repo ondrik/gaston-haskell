@@ -10,112 +10,54 @@ import Automaton (exampleAutomaton)
 
 
 
-type State = Char
-type FixpointFunc = String
-
--- fixpoint term type
-data TermFix =
-	TermFixSingleStateSet
-	| TermFixSingleTermSet TermFix
-	| TermFixCups TermFix TermFix
-	| TermFixCupsProd TermFix TermFix
-	| TermFixCaps TermFix TermFix
-	| TermFixCapsProd TermFix TermFix
-	| TermFixUnion TermFix TermFix
-	| TermFixDownCl TermFix
-	| TermFixUpClChoice TermFix
-	| TermFixLFP FixpointFunc TermFix
-	| TermFixGFP FixpointFunc TermFix
-
--- print out a fixpoint term in a human-readable format
-showTermFix :: TermFix -> String
-showTermFix TermFixSingleStateSet      = "{q}"
-showTermFix (TermFixSingleTermSet t)   = "{" ++ (showTermFix t) ++ "}"
-showTermFix (TermFixCups t1 t2)        = "(" ++ (showTermFix t1) ++ ") ×ₑ (" ++ (showTermFix t2) ++ ")"
-showTermFix (TermFixCupsProd t1 t2)    = "(" ++ (showTermFix t1) ++ ") ⊕ₑ (" ++ (showTermFix t2) ++ ")"
-showTermFix (TermFixCaps t1 t2)        = "(" ++ (showTermFix t1) ++ ") ×ₐ (" ++ (showTermFix t2) ++ ")"
-showTermFix (TermFixCapsProd t1 t2)    = "(" ++ (showTermFix t1) ++ ") ⊕ₐ (" ++ (showTermFix t2) ++ ")"
-showTermFix (TermFixUnion t1 t2)       = "(" ++ (showTermFix t1) ++ ") ∪ (" ++ (showTermFix t2) ++ ")"
-showTermFix (TermFixDownCl t)          = "↓(" ++ (showTermFix t) ++ ")"
-showTermFix (TermFixUpClChoice t)      = "↑⫫(" ++ (showTermFix t) ++ ")"
-showTermFix (TermFixLFP func t)        = "μU. " ++ (showTermFix t) ++ " ∪ " ++ func ++ "(U)"
-showTermFix (TermFixGFP func t)        = "νU. " ++ (showTermFix t) ++ " ∩ " ++ func ++ "(U)"
-
--- instantiance of the data type as class Show
-instance Show TermFix where
-	show = showTermFix
-
-
--- -- initial states
--- initial :: Aut -> TermFix
--- initial (AutAtomic phi)  = TermFixSingleStateSet
--- initial (AutUnion a1 a2) = (initial a1) `TermFixCups` (initial a2)
--- initial (AutIsect a1 a2) = (initial a1) `TermFixCaps` (initial a2)
--- initial (AutCompl a)     = TermFixSingleTermSet $ initial a
--- initial (AutProj var a)  = initial a
+-- type State = Char
+-- type FixpointFunc = String
 --
--- -- final states
--- final :: Aut -> TermFix
--- final (AutAtomic phi)  = TermFixSingleStateSet
--- final (AutUnion a1 a2) = TermFixCupsProd (final a1) (final a2)
--- final (AutIsect a1 a2) = TermFixCaps (final a1) (final a2)
--- final (AutCompl a)     = TermFixDownCl (nonfinal a)
--- final (AutProj var a)  = TermFixLFP ("pre[π(" ++ [var] ++ "), 0]") $ final a
+-- -- fixpoint term type
+-- data TermFix =
+-- 	TermFixSingleStateSet
+-- 	| TermFixSingleTermSet TermFix
+-- 	| TermFixCups TermFix TermFix
+-- 	| TermFixCupsProd TermFix TermFix
+-- 	| TermFixCaps TermFix TermFix
+-- 	| TermFixCapsProd TermFix TermFix
+-- 	| TermFixUnion TermFix TermFix
+-- 	| TermFixDownCl TermFix
+-- 	| TermFixUpClChoice TermFix
+-- 	| TermFixLFP FixpointFunc TermFix
+-- 	| TermFixGFP FixpointFunc TermFix
 --
+-- -- print out a fixpoint term in a human-readable format
+-- showTermFix :: TermFix -> String
+-- showTermFix TermFixSingleStateSet      = "{q}"
+-- showTermFix (TermFixSingleTermSet t)   = "{" ++ (showTermFix t) ++ "}"
+-- showTermFix (TermFixCups t1 t2)        = "(" ++ (showTermFix t1) ++ ") ×ₑ (" ++ (showTermFix t2) ++ ")"
+-- showTermFix (TermFixCupsProd t1 t2)    = "(" ++ (showTermFix t1) ++ ") ⊕ₑ (" ++ (showTermFix t2) ++ ")"
+-- showTermFix (TermFixCaps t1 t2)        = "(" ++ (showTermFix t1) ++ ") ×ₐ (" ++ (showTermFix t2) ++ ")"
+-- showTermFix (TermFixCapsProd t1 t2)    = "(" ++ (showTermFix t1) ++ ") ⊕ₐ (" ++ (showTermFix t2) ++ ")"
+-- showTermFix (TermFixUnion t1 t2)       = "(" ++ (showTermFix t1) ++ ") ∪ (" ++ (showTermFix t2) ++ ")"
+-- showTermFix (TermFixDownCl t)          = "↓(" ++ (showTermFix t) ++ ")"
+-- showTermFix (TermFixUpClChoice t)      = "↑⫫(" ++ (showTermFix t) ++ ")"
+-- showTermFix (TermFixLFP func t)        = "μU. " ++ (showTermFix t) ++ " ∪ " ++ func ++ "(U)"
+-- showTermFix (TermFixGFP func t)        = "νU. " ++ (showTermFix t) ++ " ∩ " ++ func ++ "(U)"
 --
--- -- nonfinal states
--- nonfinal :: Aut -> TermFix
--- nonfinal (AutAtomic phi)  = TermFixSingleStateSet
--- nonfinal (AutUnion a1 a2) = TermFixCups (nonfinal a1) (nonfinal a2)
--- nonfinal (AutIsect a1 a2) = TermFixCapsProd (nonfinal a1) (nonfinal a2)
--- nonfinal (AutCompl a)     = TermFixUpClChoice (final a)
--- nonfinal (AutProj var a)  = TermFixGFP ("cpre[π(" ++ [var] ++ "), 0]") $ nonfinal a
---
-
-
-
--- -- symbolic representation of a set of states
--- data SymbStateSet =
--- 	SymbStateSetAtomic
--- 	| SymbStateSetUnion SymbStateSet SymbStateSet
--- 	| SymbStateSetProd SymbStateSet SymbStateSet
--- 	| SymbStateSetEnclose SymbStateSet
--- 	| SymbStateSetDown SymbStateSet
--- 	| SymbStateSetUpChoice SymbStateSet
--- 	| SymbStateSetLFP Var SymbStateSet
--- 	| SymbStateSetGFP Var SymbStateSet
-
-
--- -- print out the symbolic state set in a human-readable format
--- showStateSet :: SymbStateSet -> String
--- showStateSet SymbStateSetAtomic        = "{states}"
--- showStateSet (SymbStateSetUnion s1 s2) = "(" ++ (showStateSet s1) ++ ") U (" ++ (showStateSet s2) ++ ")"
--- showStateSet (SymbStateSetProd s1 s2)  = "(" ++ (showStateSet s1) ++ ") x (" ++ (showStateSet s2) ++ ")"
--- showStateSet (SymbStateSetEnclose s)   = "{" ++ (showStateSet s) ++ "}"
--- showStateSet (SymbStateSetDown s)      = "down({" ++ (showStateSet s) ++ "})"
--- showStateSet (SymbStateSetUpChoice s)  = "upC({" ++ (showStateSet s) ++ "})"
--- showStateSet (SymbStateSetLFP var s)   = "uZ . " ++ (showStateSet s) ++ " union pre[" ++ (show var) ++ "](Z)"
--- showStateSet (SymbStateSetGFP var s)   = "nZ . " ++ (showStateSet s) ++ " isect cpre[" ++ (show var) ++ "](Z)"
-
-
 -- -- instantiance of the data type as class Show
--- instance Show SymbStateSet where
--- 	show = showStateSet
---
---
--- -- final states
--- final :: Aut -> SymbStateSet
--- final AutAtomic        = SymbStateSetAtomic
--- final (AutUnion a1 a2) = SymbStateSetUnion (final a1) (final a2)
--- final (AutIsect a1 a2) = SymbStateSetProd (final a1) (final a2)
--- final (AutCompl a)     = SymbStateSetDown (nonfinal a)
--- final (AutProj var a)  = SymbStateSetLFP var $ final a
---
---
--- -- all states of an automaton
--- allstates :: Aut -> SymbStateSet
--- allstates AutAtomic    = SymbStateSetAtomic
---
+-- instance Show TermFix where
+-- 	show = showTermFix
+
+
+runExample :: Automaton.ReturnVal
+runExample = Automaton.isectNonempty
+               exampleAutomaton
+               (Automaton.initial exampleAutomaton)
+               (Automaton.final exampleAutomaton)
+
+-- help
+gastonHelpLines :: [String]
+gastonHelpLines = [
+  "runExample :: ReturnVal      -- runs the example",
+  ""
+  ]
 
 helpLines :: [String]
 helpLines = [
@@ -123,7 +65,17 @@ helpLines = [
   ""
   ]
   ++ (offsetBy 2 Logic.helpLines)
-  ++ []
+  ++ [
+  "Automaton:",
+  ""
+  ]
+  ++ (offsetBy 2 Automaton.helpLines)
+  ++ [
+  "gaston:",
+  ""
+  ]
+  ++ (offsetBy 2 gastonHelpLines)
+  ++ []   -- guard
   where
     offsetBy n [] = []
     offsetBy n (x:xs) = ((replicate n ' ') ++ x):(offsetBy n xs)

@@ -315,3 +315,13 @@ isSubset aut lhs rhs =
 exampleAutomaton :: Aut
 exampleAutomaton = toAutomaton Logic.exampleFormula
 
+-- help
+helpLines :: [String]
+helpLines = [
+  "exampleAutomaton :: Aut      -- the automaton " ++ (showAut exampleAutomaton),
+  "initial :: Aut -> StateTerm  -- initial states of an automaton",
+  "final :: Aut -> StateTerm    -- final states of an automaton",
+  "isectNonempty :: Aut -> StateTerm -> StateTerm -> ReturnVal   -- test intersection of two terms",
+  "isSubset :: Aut -> StateTerm -> StateTerm -> ReturnVal        -- test subset relationship of two terms",
+  ""
+  ]

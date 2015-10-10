@@ -51,5 +51,6 @@ exampleFormula =
 -- help
 helpLines :: [String]
 helpLines = [
-  "exampleFormula :: String    -- the formula " ++ (showFormula exampleFormula)
+  "exampleFormula :: String    -- the formula " ++ (showFormula exampleFormula),
+  ""
   ]
