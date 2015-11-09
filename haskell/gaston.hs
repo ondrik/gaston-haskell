@@ -73,6 +73,11 @@ helpLines = [
   ]
   ++ (offsetBy 2 Automaton.helpLines)
   ++ [
+  "GUIDisplay:",
+  ""
+  ]
+  ++ (offsetBy 2 GUIDisplay.helpLines)
+  ++ [
   "gaston:",
   ""
   ]

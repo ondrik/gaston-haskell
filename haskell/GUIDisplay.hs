@@ -88,3 +88,11 @@ displayImage imagePath = do
   imageSetFromFile image imagePath
   widgetShowAll window
   mainGUI
+
+
+-- help
+helpLines :: [String]
+helpLines = [
+  "displayFormula :: Formula -> IO ()    -- displays a formula",
+  ""
+  ]

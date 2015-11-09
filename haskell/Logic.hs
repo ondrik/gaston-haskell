@@ -90,9 +90,11 @@ exampleFormulaAntiprenexed = antiprenex exampleFormula
 -- help
 helpLines :: [String]
 helpLines = [
-  "exampleFormula :: String    -- the formula " ++ (showFormula exampleFormula),
+  "exampleFormula :: String              -- the formula " ++ (showFormula exampleFormula),
+  "exampleFormulaAntiprenexed :: String  -- the formula " ++ (showFormula exampleFormulaAntiprenexed),
   ""
   ]
+
 
 
 -- --------------------------------------------------------------------------
