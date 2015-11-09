@@ -1,22 +1,22 @@
 module GUIDisplay where
 
 import Control.Monad.IO.Class
-import Data.Char
 import Graphics.UI.Gtk
-import System.Environment
 import System.Exit
-import System.IO
 import System.Directory
 import System.Process
-import Text.Regex.Posix
-import Data.IORef
 
 import qualified Logic
 import Logic (Formula, formulaToTex)
 
 
+tmpTexFileName :: String
 tmpTexFileName = "pokus.tex"
+
+tmpDviFileName :: String
 tmpDviFileName = "pokus.dvi"
+
+tmpPngFileName :: String
 tmpPngFileName = "pokus1.png"
 
 sanitizeFilePath :: FilePath -> IO FilePath
@@ -46,7 +46,6 @@ runDviPngOn inFilename outFilename = do
 -- displays a formula in a window
 displayFormula :: Formula -> IO ()
 displayFormula phi = do
-  curDir <- getCurrentDirectory
   texFilename <- sanitizeFilePath $ tmpTexFileName
   dviFilename <- sanitizeFilePath $ tmpDviFileName
   pngFilename <- sanitizeFilePath $ tmpPngFileName
@@ -73,9 +72,9 @@ createTex content = unlines
 -- shows an image in a window
 displayImage :: FilePath -> IO ()
 displayImage imagePath = do
-  initGUI
+  _ <- initGUI
   window <- windowNew
-  window `on` deleteEvent $ liftIO mainQuit >> return False
+  _ <- window `on` deleteEvent $ liftIO mainQuit >> return False
   scroll <- scrolledWindowNew Nothing Nothing
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   vbox <- vBoxNew False 0
@@ -86,8 +85,6 @@ displayImage imagePath = do
   boxPackEnd vbox hbox PackNatural 0
   boxPackStart vbox scroll PackGrow 0
   scrolledWindowAddWithViewport scroll image
-  curDir <- getCurrentDirectory
   imageSetFromFile image imagePath
-  position <- newIORef 0
   widgetShowAll window
   mainGUI

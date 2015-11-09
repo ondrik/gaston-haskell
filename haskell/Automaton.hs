@@ -134,8 +134,8 @@ initial (AutIsectFin a1 a2)    = (initial a1) `STIsectFin` (initial a2)
 initial (AutIsectNonfin a1 a2) = (initial a1) `STIsectNonfin` (initial a2)
 initial (AutComplFin a)        = STUpClosed $ initial a
 initial (AutComplNonfin a)     = STUpClosed $ initial a
-initial (AutProjFin var a)     = initial a
-initial (AutProjNonfin var a)  = initial a
+initial (AutProjFin _ a)       = initial a
+initial (AutProjNonfin _ a)    = initial a
 
 
 -- final states
@@ -185,7 +185,7 @@ pre (AutAtomicFin phi) vars (STSet states)
                           ("X", ["q1"])   -> STSet ["q1"]
                           ("Y", ["q1"])   -> STSet ["q1"]
                           ("XY", ["q1"])  -> STSet ["q1"]
-                          otherwise       -> error $ "pre(X ⊆ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+                          _               -> error $ "pre(X ⊆ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | phi == "X ⊇ Y"    = error $ "pre(X ⊇ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | phi == "Z = σ(Y)" = case (vars, states) of
                           ("X", [])            -> STSet []
@@ -202,7 +202,7 @@ pre (AutAtomicFin phi) vars (STSet states)
                           ("YZ", ["q3", "q4"]) -> STSet ["q3", "q4"]
                           ("XYZ", ["q3"])      -> STSet ["q3", "q4"]
                           ("XYZ", ["q3", "q4"])-> STSet ["q3", "q4"]
-                          otherwise            -> error $ "pre(Z = σ(Y)); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+                          _                    -> error $ "pre(Z = σ(Y)); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | otherwise         = error "pre: Unknown atomic predicate"
 pre aut vars t =
   error $ "Invalid input of pre: aut = " ++ (show aut) ++ "; vars = " ++ (show vars) ++ "; t = " ++ (show t)
@@ -220,7 +220,7 @@ cpre (AutAtomicNonfin phi) vars (STSet states)
                           ("X", [])      -> STSet []
                           ("Y", [])      -> STSet []
                           ("XY", [])     -> STSet []
-                          otherwise      -> error $ "cpre(X ⊇ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
+                          _              -> error $ "cpre(X ⊇ Y); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | phi == "Z = σ(Y)" = error $ "cpre(Z = σ(Y)); vars = " ++ (show vars) ++ "; states = " ++ (show states)
   | otherwise         = error "cpre: Unknown atomic predicate"
 cpre aut vars t =
@@ -238,37 +238,38 @@ listIsectNonempty lhs rhs = or $ map (\x -> x `elem` rhs) lhs
 
 -- tests whether an intersection of state terms is nonempty
 isectNonempty :: Aut -> StateTerm -> StateTerm -> ReturnVal
-isectNonempty (AutUnionFin a1 a2) (STUnionFin l1 l2) (STUnionFin r1 r2) = res
-  where
-    (bool1, fxp1) = isectNonempty a1 l1 r1
-    (bool2, fxp2) = isectNonempty a2 l2 r2
-    res = case (bool1, bool2) of
-      (False, False) -> (False, fxp1 `STUnionFin` fxp2)
-      (True, _)      -> (True, fxp1 `STUnionFin` STUnknown)
-      (_, True)      -> (True, STUnknown `STUnionFin` fxp2)
-isectNonempty (AutIsectFin a1 a2) (STIsectFin l1 l2) (STIsectFin r1 r2) = res
-  where
-    (bool1, fxp1) = isectNonempty a1 l1 r1
-    (bool2, fxp2) = isectNonempty a2 l2 r2
-    res = case (bool1, bool2) of
-      (True, True) -> (True, fxp1 `STIsectFin` fxp2)
-      (False, _)   -> (False, fxp1 `STIsectFin` STUnknown)
-      (_, False)   -> (False, STUnknown `STIsectFin` fxp2)
-isectNonempty (AutComplFin a) (STUpClosed lhs) (STDownClosed rhs)       = (fst res, STDownClosed (snd res))
-  where
-    res = isSubset a lhs rhs
-isectNonempty (AutProjFin var a) lhs (STListFin xs)                     = res     -- FIXME: this is wrong
-  where
-    boolFxpList = nub $ map (isectNonempty a lhs) xs
-    res = case (or (map fst boolFxpList)) of
-      True   -> (True, STListFin $ (map snd $ falsePrefixPlusOne boolFxpList) ++ [STUnknown])
-      False  -> (False, STListFin (map snd boolFxpList))
-    falsePrefixPlusOne list = beg ++ ([head end])
-      where
-        (beg, end) = span (\x -> (fst x) == False) list
-isectNonempty (AutAtomicFin _) (STSet lhs) (STSet rhs)                  = (listIsectNonempty lhs rhs, STSet rhs)
-isectNonempty aut lhs rhs =
-  error $ "isectNonempty: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
+isectNonempty = error "isectNonempty not working now"
+-- isectNonempty (AutUnionFin a1 a2) (STUnionFin l1 l2) (STUnionFin r1 r2) = res
+--   where
+--     (bool1, fxp1) = isectNonempty a1 l1 r1
+--     (bool2, fxp2) = isectNonempty a2 l2 r2
+--     res = case (bool1, bool2) of
+--       (False, False) -> (False, fxp1 `STUnionFin` fxp2)
+--       (True, _)      -> (True, fxp1 `STUnionFin` STUnknown)
+--       (_, True)      -> (True, STUnknown `STUnionFin` fxp2)
+-- isectNonempty (AutIsectFin a1 a2) (STIsectFin l1 l2) (STIsectFin r1 r2) = res
+--   where
+--     (bool1, fxp1) = isectNonempty a1 l1 r1
+--     (bool2, fxp2) = isectNonempty a2 l2 r2
+--     res = case (bool1, bool2) of
+--       (True, True) -> (True, fxp1 `STIsectFin` fxp2)
+--       (False, _)   -> (False, fxp1 `STIsectFin` STUnknown)
+--       (_, False)   -> (False, STUnknown `STIsectFin` fxp2)
+-- isectNonempty (AutComplFin a) (STUpClosed lhs) (STDownClosed rhs)       = (fst res, STDownClosed (snd res))
+--   where
+--     res = isSubset a lhs rhs
+-- isectNonempty (AutProjFin var a) lhs (STListFin xs)                     = res     -- FIXME: this is wrong
+--   where
+--     boolFxpList = nub $ map (isectNonempty a lhs) xs
+--     res = case (or (map fst boolFxpList)) of
+--       True   -> (True, STListFin $ (map snd $ falsePrefixPlusOne boolFxpList) ++ [STUnknown])
+--       False  -> (False, STListFin (map snd boolFxpList))
+--     falsePrefixPlusOne list = beg ++ ([head end])
+--       where
+--         (beg, end) = span (\x -> (fst x) == False) list
+-- isectNonempty (AutAtomicFin _) (STSet lhs) (STSet rhs)                  = (listIsectNonempty lhs rhs, STSet rhs)
+-- isectNonempty aut lhs rhs =
+--   error $ "isectNonempty: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
 
 
 -- checks whether one list is a subset of another list
@@ -278,42 +279,44 @@ listIsSubset lhs rhs = and $ map (\x -> x `elem` rhs) lhs
 
 -- tests whether one state term is (semantically) a subset of another one
 isSubset :: Aut -> StateTerm -> StateTerm -> ReturnVal
-isSubset (AutUnionNonfin a1 a2) (STUnionNonfin l1 l2) (STUnionNonfin r1 r2) = res
-  where
-    (bool1, fxp1) = isSubset a1 l1 r1
-    (bool2, fxp2) = isSubset a2 l2 r2
-    res = case (bool1, bool2) of
-      (True, True) -> (True, fxp1 `STUnionNonfin` fxp2)
-      (False, _)   -> (False, fxp1 `STUnionNonfin` STUnknown)
-      (_, False)   -> (False, STUnknown `STUnionNonfin` fxp2)
-isSubset (AutIsectNonfin a1 a2) (STIsectNonfin l1 l2) (STIsectNonfin r1 r2) = res
-  where
-    (bool1, fxp1) = isSubset a1 l1 r1
-    (bool2, fxp2) = isSubset a2 l2 r2
-    res = case (bool1, bool2) of    -- FIXME: this is very fishy, cf. the note on the whiteboard
-      (True, True) -> (True, fxp1 `STIsectNonfin` fxp2)
-      (False, _)   -> (False, fxp1 `STIsectNonfin` STUnknown)
-      (_, False)   -> (False, STUnknown `STIsectNonfin` fxp2)
-isSubset (AutComplNonfin a) (STUpClosed lhs) (STUpClosedChoice rhs)         = (fst res, STUpClosedChoice (snd res))
-  where
-    res = isectNonempty a lhs rhs
-isSubset (AutProjNonfin var a) lhs (STListNonfin xs)                        = res        -- FIXME: this is wrong
-  where
-    boolFxpList = nub $ map (isSubset a lhs) xs
-    res = case (and (map fst boolFxpList)) of
-      True   -> (True, STListFin (map snd boolFxpList))
-      False  -> (False, STListFin $ (map snd $ truePrefixPlusOne boolFxpList) ++ [STUnknown])
-    truePrefixPlusOne list = beg ++ ([head end])
-      where
-        (beg, end) = span (\x -> (fst x) == True) list
-isSubset (AutAtomicNonfin _) (STSet lhs) (STSet rhs)                        = (listIsSubset lhs rhs, STSet rhs)
-isSubset aut lhs rhs =
-  error $ "isSubset: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
+isSubset = error "isSubset not working now"
+-- isSubset (AutUnionNonfin a1 a2) (STUnionNonfin l1 l2) (STUnionNonfin r1 r2) = res
+--   where
+--     (bool1, fxp1) = isSubset a1 l1 r1
+--     (bool2, fxp2) = isSubset a2 l2 r2
+--     res = case (bool1, bool2) of
+--       (True, True) -> (True, fxp1 `STUnionNonfin` fxp2)
+--       (False, _)   -> (False, fxp1 `STUnionNonfin` STUnknown)
+--       (_, False)   -> (False, STUnknown `STUnionNonfin` fxp2)
+-- isSubset (AutIsectNonfin a1 a2) (STIsectNonfin l1 l2) (STIsectNonfin r1 r2) = res
+--   where
+--     (bool1, fxp1) = isSubset a1 l1 r1
+--     (bool2, fxp2) = isSubset a2 l2 r2
+--     res = case (bool1, bool2) of    -- FIXME: this is very fishy, cf. the note on the whiteboard
+--       (True, True) -> (True, fxp1 `STIsectNonfin` fxp2)
+--       (False, _)   -> (False, fxp1 `STIsectNonfin` STUnknown)
+--       (_, False)   -> (False, STUnknown `STIsectNonfin` fxp2)
+-- isSubset (AutComplNonfin a) (STUpClosed lhs) (STUpClosedChoice rhs)         = (fst res, STUpClosedChoice (snd res))
+--   where
+--     res = isectNonempty a lhs rhs
+-- isSubset (AutProjNonfin var a) lhs (STListNonfin xs)                        = res        -- FIXME: this is wrong
+--   where
+--     boolFxpList = nub $ map (isSubset a lhs) xs
+--     res = case (and (map fst boolFxpList)) of
+--       True   -> (True, STListFin (map snd boolFxpList))
+--       False  -> (False, STListFin $ (map snd $ truePrefixPlusOne boolFxpList) ++ [STUnknown])
+--     truePrefixPlusOne list = beg ++ ([head end])
+--       where
+--         (beg, end) = span (\x -> (fst x) == True) list
+-- isSubset (AutAtomicNonfin _) (STSet lhs) (STSet rhs)                        = (listIsSubset lhs rhs, STSet rhs)
+-- isSubset aut lhs rhs =
+--   error $ "isSubset: incompatible terms in aut = " ++ (show aut) ++ "; lhs = " ++ (show lhs) ++ "; rhs = " ++ (show rhs)
 
 
 -- the automaton for the example formula
 exampleAutomaton :: Aut
 exampleAutomaton = toAutomaton Logic.exampleFormula
+
 
 -- help
 helpLines :: [String]
