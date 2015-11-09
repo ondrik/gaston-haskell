@@ -8,6 +8,8 @@ import Logic (exampleFormula)
 import qualified Automaton
 import Automaton (exampleAutomaton)
 
+import qualified GUIDisplay
+import GUIDisplay (displayFormula)
 
 
 -- type State = Char

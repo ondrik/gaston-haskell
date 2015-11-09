@@ -54,3 +54,42 @@ helpLines = [
   "exampleFormula :: String    -- the formula " ++ (showFormula exampleFormula),
   ""
   ]
+
+
+-- --------------------------------------------------------------------------
+-- part with LaTeX rendering
+-- --------------------------------------------------------------------------
+
+texOr     = "\\lor"
+texAnd    = "\\land"
+texNot    = "\\neg"
+texExists = "\\exists"
+texForAll = "\\forall"
+
+-- translates a formula to TeX
+formulaToTex :: Formula -> String
+formulaToTex (FormulaAtomic phi)
+  | phi == "X ⊆ Y"    = "X \\subseteq Y"
+  | phi == "X ⊇ Y"    = "X \\supseteq Y"
+  | phi == "Z = σ(Y)" = "Z = \\sigma(Y)"
+  | otherwise         = error "initial: Unknown atomic predicate"
+formulaToTex (Disj f1 f2)   = binaryOpTex texOr f1 f2
+formulaToTex (Conj f1 f2)   = binaryOpTex texAnd f1 f2
+formulaToTex (Neg f)        = texNot ++ (parenthesiseTex f)
+formulaToTex (Exists var f) = quantifierTex texExists var f
+formulaToTex (ForAll var f) = quantifierTex texForAll var f
+
+
+parenthesiseTex :: Formula -> String
+parenthesiseTex str = "\\left( " ++ (formulaToTex str) ++ " \\right)"
+
+
+binaryOpTex :: String -> Formula -> Formula -> String
+binaryOpTex op f1 f2 =
+  (parenthesiseTex f1) ++
+  " " ++ op ++ " " ++
+  (parenthesiseTex f2)
+
+
+quantifierTex :: String -> Var -> Formula -> String
+quantifierTex quant var f = quant ++ " " ++ [var] ++ " " ++ (parenthesiseTex f)
