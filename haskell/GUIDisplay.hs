@@ -60,10 +60,12 @@ displayFormula phi = do
 createTex :: String -> String
 createTex content = unlines
   [ "\\documentclass{minimal}"
+  , "\\usepackage{amsmath}"
+  -- , "\\setlength{\\mathindent}{0pt}"
   , "\\begin{document}"
-  , "$$"
-  , content
-  , "$$"
+  , "\\begin{flalign*}"
+  , content ++ " && \\\\"
+  , "\\end{flalign*}"
   , "\\end{document}"
   ]
 
@@ -78,7 +80,7 @@ displayImage imagePath = do
   scrolledWindowSetPolicy scroll PolicyAutomatic PolicyAutomatic
   vbox <- vBoxNew False 0
   hbox <- hBoxNew False 0
-  set window [windowDefaultWidth := 600, windowDefaultHeight := 500,
+  set window [windowDefaultWidth := 900, windowDefaultHeight := 300,
               containerChild := vbox, containerBorderWidth := 0]
   image <- imageNew
   boxPackEnd vbox hbox PackNatural 0
