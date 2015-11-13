@@ -152,6 +152,7 @@ final (AutComplFin a)        = STDownClosed $ nonfinal a
 final (AutProjFin var a)     = STListFin fxList
   where
     fxList = computeFixpoint (\xs -> xs `union` (map (pre a [var])) xs) [final a]
+final _ = error "Undefined"
 
 
 -- computes a fixpoint of a function
@@ -172,6 +173,7 @@ nonfinal (AutComplNonfin a)     = STUpClosedChoice $ final a
 nonfinal (AutProjNonfin var a)  = STListNonfin fxList
   where
     fxList = computeFixpoint (\xs -> xs `union` (map (cpre a [var])) xs) [nonfinal a]
+nonfinal _ = error "Undefined"
 
 
 -- zero-predecessors of a state term with a transition function with given variables projected out

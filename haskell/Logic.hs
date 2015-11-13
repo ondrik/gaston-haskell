@@ -67,7 +67,7 @@ antiprenex (Exists var f) =
       -- where
       --   fvF1 = g1
       --   fvF2 = g2
-antiprenex phi@(ForAll var f) =
+antiprenex (ForAll var f) =
   case f of
     Conj g1 g2 -> (ForAll var $ antiprenex g1) `Conj` (ForAll var $ antiprenex g2)
     _          -> ForAll var $ antiprenex f
